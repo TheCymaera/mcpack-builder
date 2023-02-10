@@ -1,5 +1,5 @@
 export class Namespace {
-	constructor(readonly namespace: string) {}
+	constructor(public namespace: string) {}
 
 	id(id: string) {
 		return new NamespacedID(this.namespace, id);
@@ -7,7 +7,7 @@ export class Namespace {
 }
 
 export class NamespacedID {
-	constructor(readonly namespace: string, readonly id: string) {
+	constructor(public namespace: string, public id: string) {
 		const errors = NamespacedID.validate(this.build());
 		if (errors.length > 0) {
 			console.group(`Invalid namespaced ID: ${this.build()}`);
@@ -62,7 +62,7 @@ export class NamespacedID {
 }
 
 export class Duration {
-	constructor(readonly value: number, readonly unit: string) {}
+	constructor(public value: number, public unit: string) {}
 
 	build() {
 		return `${this.value}${this.unit}`;
@@ -112,7 +112,7 @@ export enum ScheduleMode {
 }
 
 export class FunctionReference {
-	constructor(readonly namespacedId: NamespacedID|TagReference) {}
+	constructor(public namespacedId: NamespacedID|TagReference) {}
 
 	run() {
 		return new CustomCommand(`function ${this.#selector()}`);
@@ -132,7 +132,7 @@ export class FunctionReference {
 }
 
 export class TagReference {
-	constructor(readonly namespacedId: NamespacedID) {}
+	constructor(public namespacedId: NamespacedID) {}
 
 	build() {
 		return "#" + this.namespacedId.build();
@@ -144,7 +144,7 @@ export interface Command {
 }
 
 export class CustomCommand implements Command {
-	constructor(readonly command: string) {}
+	constructor(public command: string) {}
 
 	buildCommand() {
 		if (this.command.startsWith('/')) {
@@ -157,12 +157,12 @@ export class CustomCommand implements Command {
 }
 
 export class ScoreAllocator {
-	readonly scoreboard: Scoreboard;
-	readonly prefix: string;
-	readonly constantPrefix: string;
+	public scoreboard: Scoreboard;
+	public prefix: string;
+	public constantPrefix: string;
 
-	readonly initConstants: Command[] = [];
-	readonly constants = new Set<number>();
+	public initConstants: Command[] = [];
+	public constants = new Set<number>();
 
 	constructor(config: {
 		scoreboard: Scoreboard,
@@ -200,7 +200,7 @@ export class ScoreAllocator {
 }
 
 export class Comment implements Command {
-	constructor(readonly comment: string) {}
+	constructor(public comment: string) {}
 
 	buildCommand() {
 		return `# ${this.comment}`;
@@ -208,9 +208,9 @@ export class Comment implements Command {
 }
 
 export class Scoreboard {
-	readonly objective: string;
-	readonly criteria: string;
-	readonly displayName?: TextComponent;
+	public objective: string;
+	public criteria: string;
+	public displayName?: TextComponent;
 
 	constructor(options: {
 		objective: string,
@@ -258,12 +258,12 @@ export class Scoreboard {
 }
 
 export interface TargetSelector {
-	readonly selectorType: string;
+	selectorType: string;
 	buildSelector(): string;
 }
 
 export class EntitySelector implements TargetSelector {
-	readonly selectorType = 'entity';
+	public selectorType = 'entity';
 	constructor(variable: string) {
 		this.#variable = variable;
 	}
@@ -324,12 +324,12 @@ export class EntitySelector implements TargetSelector {
 		return new EntitySelector('@e');
 	}
 
-	readonly #variable: string;
-	readonly #arguments: string[] = [];
+	#variable: string;
+	#arguments: string[] = [];
 }
 
 export class CustomSelector implements TargetSelector {
-	constructor(readonly selectorType: string, readonly selector: string) {}
+	constructor(public selectorType: string, public selector: string) {}
 
 	buildSelector() {
 		return this.selector;
@@ -346,8 +346,8 @@ export enum NumericDataType {
 }
 
 export class NBTReference {
-	readonly target: TargetSelector;
-	readonly path: string;
+	public target: TargetSelector;
+	public path: string;
 
 	constructor(config: {
 		target: TargetSelector,
@@ -371,7 +371,7 @@ export class NBTReference {
 }
 
 export class ScoreReference implements ExecuteStoreDestination {
-	constructor(readonly objective: string, readonly target: EntitySelector|CustomSelector) {}
+	constructor(public objective: string, public target: EntitySelector|CustomSelector) {}
 
 	getValue() {
 		return new CustomCommand(`scoreboard players get ${this.target.buildSelector()} ${this.objective}`);
@@ -470,7 +470,7 @@ export class ScoreReference implements ExecuteStoreDestination {
 }
 
 export class NumberRange {
-	private constructor(readonly min: number|undefined, readonly max: number|undefined) {}
+	private constructor(public min: number|undefined, public max: number|undefined) {}
 
 	build(): string {
 		if (this.min === this.max) return this.min!.toString();
@@ -546,7 +546,7 @@ export interface ExecuteCondition {
 }
 
 export class ExecuteCustomSubcommand implements ExecuteSubCommand {
-	constructor(readonly command: string) {}
+	constructor(public command: string) {}
 
 	buildExecuteSubCommand() {
 		return this.command;
@@ -554,7 +554,7 @@ export class ExecuteCustomSubcommand implements ExecuteSubCommand {
 }
 
 export class ExecuteNBTStoreDestination {
-	constructor(readonly target: NBTReference, readonly dataType: NumericDataType, readonly scale: number) {}
+	constructor(public target: NBTReference, public dataType: NumericDataType, public scale: number) {}
 
 	buildExecuteStoreDestination() {
 		return `${this.target.target.selectorType} ${this.target.target.buildSelector()} ${this.target.path} ${this.dataType} ${this.scale}`;
@@ -565,9 +565,9 @@ export type CompareScoreOperator = '<' | '<=' | '=' | '>=' | '>';
 
 export class CompareScores implements ExecuteCondition {
 	constructor(
-		readonly lhs: ScoreReference,
-		readonly operator: CompareScoreOperator,
-		readonly rhs: ScoreReference,
+		public lhs: ScoreReference,
+		public operator: CompareScoreOperator,
+		public rhs: ScoreReference,
 	) { }
 
 	buildExecuteCondition() {
@@ -579,8 +579,8 @@ export class CompareScores implements ExecuteCondition {
 
 export class ScoreInRange implements ExecuteCondition {
 	constructor(
-		readonly score: ScoreReference,
-		readonly range: NumberRange,
+		public score: ScoreReference,
+		public range: NumberRange,
 	) {}
 
 	buildExecuteCondition() {
@@ -611,8 +611,8 @@ export enum Color {
 
 export class TextComponentClickEvent {
 	constructor(
-		readonly action: string,
-		readonly value: string,
+		public action: string,
+		public value: string,
 	) {}
 	
 	openURL(url: string) {
@@ -640,30 +640,12 @@ export class TextComponentClickEvent {
 	}
 }
 
-export interface TextComponentBase {
+export class TextComponent {
+	[key: string]: unknown;
+	
 	/**
 	 * This text is appended to the end of the text.
 	 */
-	readonly extra?: readonly TextComponent[];
-	readonly color?: Color;
-	readonly bold?: boolean;
-	readonly italic?: boolean;
-	readonly underlined?: boolean;
-	readonly strikethrough?: boolean;
-	readonly obfuscated?: boolean;
-	/**
-	 * When shift-clicking the text, this text will be inserted into the chat.
-	 */
-	readonly insertion?: string;
-	/**
-	 * When clicking the text, this action will be performed.
-	 */
-	readonly clickEvent?: TextComponentClickEvent;
-}
-
-export class TextComponent implements TextComponentBase {
-	[key: string]: unknown;
-	
 	extra?: TextComponent[];
 	color?: Color;
 	bold?: boolean;
@@ -671,7 +653,13 @@ export class TextComponent implements TextComponentBase {
 	underlined?: boolean;
 	strikethrough?: boolean;
 	obfuscated?: boolean;
+	/**
+	 * When shift-clicking the text, this text will be inserted into the chat.
+	 */
 	insertion?: string;
+	/**
+	 * When clicking the text, this action will be performed.
+	 */
 	clickEvent?: TextComponentClickEvent;
 
 	constructor(value: unknown) {
@@ -739,7 +727,7 @@ export class Tellraw {
 }
 
 export class Tag {
-	constructor(readonly values: readonly (NamespacedID | TagReference)[], readonly replace: boolean = false) {}
+	constructor(public values: (NamespacedID | TagReference)[], public replace: boolean = false) {}
 
 	build() {
 		return JSON.stringify({
