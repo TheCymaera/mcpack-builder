@@ -1,7 +1,7 @@
 export class Namespace {
 	constructor(readonly namespace: string) {}
 
-	getID(id: string) {
+	id(id: string) {
 		return new NamespacedID(this.namespace, id);
 	}
 }
@@ -18,7 +18,7 @@ export class NamespacedID {
 		}
 	}
 
-	getID(id: string) {
+	childID(id: string) {
 		return new NamespacedID(this.namespace, `${this.id}/${id}`);
 	}
 
