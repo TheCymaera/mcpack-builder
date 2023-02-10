@@ -115,15 +115,15 @@ export class FunctionReference {
 	constructor(readonly namespacedId: NamespacedID|TagReference) {}
 
 	run() {
-		return CustomCommand.single(`function ${this.#selector()}`);
+		return new CustomCommand(`function ${this.#selector()}`);
 	}
 
 	schedule(delay: Duration, mode = ScheduleMode.Replace) {
-		return CustomCommand.single(`schedule function ${this.#selector()} ${delay.build()} ${mode}`);
+		return new CustomCommand(`schedule function ${this.#selector()} ${delay.build()} ${mode}`);
 	}
 
 	scheduleClear() {
-		return CustomCommand.single(`schedule clear ${this.#selector()}`);
+		return new CustomCommand(`schedule clear ${this.#selector()}`);
 	}
 
 	#selector() {
@@ -144,7 +144,7 @@ export interface Command {
 }
 
 export class CustomCommand implements Command {
-	private constructor(readonly command: string) {}
+	constructor(readonly command: string) {}
 
 	buildCommand() {
 		if (this.command.startsWith('/')) {
@@ -153,10 +153,6 @@ export class CustomCommand implements Command {
 		}
 
 		return this.command;
-	}
-
-	static single(command: string) {
-		return new CustomCommand(command);
 	}
 }
 
@@ -231,13 +227,13 @@ export class Scoreboard {
 
 	create() {
 		if (this.displayName === undefined) {
-			return CustomCommand.single(`scoreboard objectives add ${this.objective} ${this.criteria}`);
+			return new CustomCommand(`scoreboard objectives add ${this.objective} ${this.criteria}`);
 		}
-		return CustomCommand.single(`scoreboard objectives add ${this.objective} ${this.criteria} ${JSON.stringify(this.displayName)}`);
+		return new CustomCommand(`scoreboard objectives add ${this.objective} ${this.criteria} ${JSON.stringify(this.displayName)}`);
 	}
 
 	remove() {
-		return CustomCommand.single(`scoreboard objectives remove ${this.objective}`);
+		return new CustomCommand(`scoreboard objectives remove ${this.objective}`);
 	}
 
 	entity(target: CustomSelector|EntitySelector) {
@@ -366,11 +362,11 @@ export class NBTReference {
 	}
 
 	getValue(scale: number) {
-		return CustomCommand.single(`data get ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} ${scale}`);
+		return new CustomCommand(`data get ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} ${scale}`);
 	}
 
 	setLiteralValue(value: string) {
-		return CustomCommand.single(`data modify ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} set value ${value}`);
+		return new CustomCommand(`data modify ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} set value ${value}`);
 	}
 }
 
@@ -378,15 +374,15 @@ export class ScoreReference implements ExecuteStoreDestination {
 	constructor(readonly objective: string, readonly target: EntitySelector|CustomSelector) {}
 
 	getValue() {
-		return CustomCommand.single(`scoreboard players get ${this.target.buildSelector()} ${this.objective}`);
+		return new CustomCommand(`scoreboard players get ${this.target.buildSelector()} ${this.objective}`);
 	}
 
 	addConstant(value: number) {
-		return CustomCommand.single(`scoreboard players add ${this.target.buildSelector()} ${this.objective} ${value}`);
+		return new CustomCommand(`scoreboard players add ${this.target.buildSelector()} ${this.objective} ${value}`);
 	}
 
 	subtractConstant(value: number) {
-		return CustomCommand.single(`scoreboard players remove ${this.target.buildSelector()} ${this.objective} ${value}`);
+		return new CustomCommand(`scoreboard players remove ${this.target.buildSelector()} ${this.objective} ${value}`);
 	}
 
 	assignConstant(value: number) {
@@ -394,11 +390,11 @@ export class ScoreReference implements ExecuteStoreDestination {
 			console.warn(`Cannot assign non-integer value ${value} to score ${this.objective}`);
 		}
 
-		return CustomCommand.single(`scoreboard players set ${this.target.buildSelector()} ${this.objective} ${value}`);
+		return new CustomCommand(`scoreboard players set ${this.target.buildSelector()} ${this.objective} ${value}`);
 	}
 
 	opScore(operation: string, score: ScoreReference) {
-		return CustomCommand.single(`scoreboard players operation ${this.target.buildSelector()} ${this.objective} ${operation} ${score.target.buildSelector()} ${score.objective}`);
+		return new CustomCommand(`scoreboard players operation ${this.target.buildSelector()} ${this.objective} ${operation} ${score.target.buildSelector()} ${score.objective}`);
 	}
 
 	addScore(score: ScoreReference) {
