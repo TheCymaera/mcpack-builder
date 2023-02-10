@@ -1,0 +1,23 @@
+{
+	"name": "mcpack-builder",
+	"version": "1.0.0",
+	"description": "A utility for building Minecraft datapacks packs.",
+	"license": "MIT",
+	"type": "module",
+	"author": "Cymaera",
+	"main": "dst/mod.js",
+	"files": [
+		"./dst/**"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"watch": "tsc -w -p tsconfig.json"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/TheCymaera/mcpack-builder"
+	},
+	"bugs": {
+		"url": "https://github.com/TheCymaera/mcpack-builder/issues"
+	}
+}
