@@ -178,7 +178,7 @@ export class ScoreAllocator {
 		this.constantPrefix = config.constantPrefix ?? "C_";
 	}
 
-	allocScore() {
+	score() {
 		let i = 0;
 		let name: string;
 		do {
@@ -187,13 +187,13 @@ export class ScoreAllocator {
 		} while (this.#usedNames.has(name));
 		this.#usedNames.add(name);
 
-		const score = this.scoreboard.playerScore(name);
+		const score = this.scoreboard.custom(name);
 		return score
 	}
 
 	constant(value: number) {
 		const name = `${this.constantPrefix}${value}`;
-		const score = this.scoreboard.playerScore(name);
+		const score = this.scoreboard.custom(name);
 		if (!this.constants.has(value)) {
 			this.initConstants.push(score.assignConstant(value));
 		}
@@ -240,11 +240,11 @@ export class Scoreboard {
 		return CustomCommand.single(`scoreboard objectives remove ${this.objective}`);
 	}
 
-	score(target: CustomSelector|EntitySelector) {
+	entity(target: CustomSelector|EntitySelector) {
 		return new ScoreReference(this.objective, target);
 	}
 
-	playerScore(player: string) {
+	custom(player: string) {
 		return new ScoreReference(this.objective, new CustomSelector("", player));
 	}
 
@@ -501,10 +501,10 @@ export class NumberRange {
 }
 
 export class Execute implements Command {
-	constructor(readonly subcommands: readonly ExecuteSubCommand[] = []) {}
-
+	constructor(public subcommands: ExecuteSubCommand[] = []) {}
 	append(subcommand: ExecuteSubCommand) {
-		return new Execute([...this.subcommands, subcommand]);
+		this.subcommands.push(subcommand);
+		return this;
 	}
 
 	as(target: EntitySelector|CustomSelector) {
