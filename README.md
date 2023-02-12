@@ -15,7 +15,7 @@ bun install mcpack-builder
 ```
 
 Deno
-```
+```typescript
 import { Datapack } from "npm:mcpack-builder"
 ```
 

@@ -368,14 +368,18 @@ export class NBTReference {
 	}
 
 	assignScore(score: ScoreReference, dataType: NumericDataType, scale: number) {
-		return new Execute().storeResult(new ExecuteNBTStoreDestination(this, dataType, scale)).run(score.getValue());
+		return new Execute().storeResult(new ExecuteStoreNBTDestination(this, dataType, scale)).run(score.getValue());
+	}
+
+	assignNBT(nbt: NBTReference) {
+		return new CustomCommand(`data modify ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} set from ${nbt.target.selectorType} ${nbt.target.buildSelector()} ${nbt.path}`);
 	}
 
 	getValue(scale: number) {
 		return new CustomCommand(`data get ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} ${scale}`);
 	}
 
-	setLiteralValue(value: string) {
+	setValueLiteral(value: string) {
 		return new CustomCommand(`data modify ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} set value ${value}`);
 	}
 }
@@ -567,7 +571,7 @@ export class ExecuteCustomSubcommand implements ExecuteSubCommand {
 	}
 }
 
-export class ExecuteNBTStoreDestination {
+export class ExecuteStoreNBTDestination {
 	constructor(public target: NBTReference, public dataType: NumericDataType, public scale: number) {}
 
 	buildExecuteStoreDestination() {
