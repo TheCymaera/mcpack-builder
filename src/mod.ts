@@ -437,14 +437,14 @@ export class ScoreReference implements ExecuteStoreDestination {
 
 	greaterThan(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.greaterThan(other));
+			return new ScoreInRange(this, NumberRange.greaterThanOrEqualTo(other + 1));
 		}
 		return new CompareScores(this, '>', other);
 	}
 
 	lessThan(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.lessThan(other));
+			return new ScoreInRange(this, NumberRange.lessThanOrEqualTo(other - 1));
 		}
 		return new CompareScores(this, '<', other);
 	}
@@ -456,20 +456,24 @@ export class ScoreReference implements ExecuteStoreDestination {
 		return new CompareScores(this, '=', other);
 	}
 
+	/**
+	 * @param min Inclusive
+	 * @param max Inclusive
+	 */
 	between(min: number, max: number) {
 		return new ScoreInRange(this, NumberRange.between(min, max));
 	}
 
 	lessThanOrEqualTo(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.lessThan(other + 1));
+			return new ScoreInRange(this, NumberRange.lessThanOrEqualTo(other));
 		}
 		return new CompareScores(this, '<=', other);
 	}
 
 	greaterThanOrEqualTo(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.greaterThan(other - 1));
+			return new ScoreInRange(this, NumberRange.greaterThanOrEqualTo(other));
 		}
 		return new CompareScores(this, '>=', other);
 	}
@@ -493,11 +497,11 @@ export class NumberRange {
 		return `${this.min}..${this.max}`;
 	}
 
-	static lessThan(max: number) {
+	static lessThanOrEqualTo(max: number) {
 		return new NumberRange(undefined, max);
 	}
 
-	static greaterThan(min: number) {
+	static greaterThanOrEqualTo(min: number) {
 		return new NumberRange(min, undefined);
 	}
 
