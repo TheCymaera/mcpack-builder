@@ -1,8 +1,28 @@
+export interface Logger {
+	log(message: string): void;
+	warn(message: string): void;
+	error(message: string): void;
+}
+
+
+let log: Logger = console;
+export function setLogger(logger: Logger) {
+	log = logger;
+}
+
 export class Namespace {
 	constructor(public namespace: string) {}
 
 	id(id: string) {
 		return new NamespacedID(this.namespace, id);
+	}
+
+	static validate(namespace: string) {
+		const INVALID_NAMESPACE = 'Namespaces must only contain lowercase letters, numbers, dashes, and underscores';
+		if (!/^[a-z0-9_-]+$/.test(namespace)) {
+			return [INVALID_NAMESPACE];
+		}
+		return [];
 	}
 }
 
@@ -10,11 +30,10 @@ export class NamespacedID {
 	constructor(public namespace: string, public id: string) {
 		const errors = NamespacedID.validate(this.build());
 		if (errors.length > 0) {
-			console.group(`Invalid namespaced ID: ${this.build()}`);
+			log.warn(`Invalid namespaced ID: ${this.build()}`);
 			for (const error of errors) {
-				console.warn(error);
+				log.warn("  " + error);
 			}
-			console.groupEnd();
 		}
 	}
 
@@ -36,28 +55,20 @@ export class NamespacedID {
 	}
 
 	static validate(namespacedId: string): string[] {
-		const WRONG_FORMAT = "Namespaced ID must be in the format 'namespace:id'";
-		const INVALID_NAMESPACE = 'Namespaces must only contain lowercase letters, numbers, dashes, and underscores';
-		const INVALID_ID = 'Ids must only contain lowercase letters, numbers, underscores, dashes, and forward-slashes';
-
 		const [namespace, id, ...rest] = namespacedId.split(':');
-		if (rest.length > 0) {
-			return [WRONG_FORMAT];
+
+		if (!namespace || !id || rest.length > 0) {
+			return [`Namespaced ID must be in the format "namespace:id"`];
 		}
 
-		if (!namespace || !id) {
-			return [WRONG_FORMAT];
-		}
-
-		if (!/^[a-z0-9_-]+$/.test(namespace)) {
-			return [INVALID_NAMESPACE];
-		}
+		const errors: string[] = [];
+		errors.push(...Namespace.validate(namespace));
 
 		if (!/^[a-z0-9_\-/]+$/.test(id)) {
-			return [INVALID_ID];
+			errors.push(`Ids must only contain lowercase letters, numbers, underscores, dashes, and forward-slashes`);
 		}
 
-		return [];
+		return errors;
 	}
 }
 
@@ -148,8 +159,7 @@ export class CustomCommand implements Command {
 
 	buildCommand() {
 		if (this.command.startsWith('/')) {
-			console.warn(`Command "${this.command}" starts with a slash. This is invalid syntax in datapack functions.`);
-			console.warn(this);
+			log.warn(`Command "${this.command}" starts with a slash. This is invalid syntax in datapack functions.`);
 		}
 
 		return this.command;
@@ -222,7 +232,7 @@ export class Scoreboard {
 		this.displayName = options.displayName;
 
 		const error = Scoreboard.verifyObjective(this.objective);
-		if (error) console.warn(error);
+		if (error) log.warn(error);
 	}
 
 	create() {
@@ -387,7 +397,7 @@ export class ScoreReference implements ExecuteStoreDestination {
 
 	assignConstant(value: number) {
 		if (!Number.isInteger(value)) {
-			console.warn(`Cannot assign non-integer value ${value} to score ${this.objective}`);
+			log.warn(`Cannot assign non-integer value ${value} to score ${this.objective}`);
 		}
 
 		return new CustomCommand(`scoreboard players set ${this.target.buildSelector()} ${this.objective} ${value}`);
@@ -507,6 +517,10 @@ export class Execute implements Command {
 		return this.append(new ExecuteCustomSubcommand("as " + target.buildSelector()));
 	}
 
+	at(target: EntitySelector|CustomSelector) {
+		return this.append(new ExecuteCustomSubcommand("at " + target.buildSelector()));
+	}
+
 	if(condition: ExecuteCondition) {
 		return this.append(new ExecuteCustomSubcommand("if " + condition.buildExecuteCondition()));
 	}
@@ -606,8 +620,6 @@ export enum Color {
 	Yellow = "yellow",
 	White = "white",
 }
-
-
 
 export class TextComponentClickEvent {
 	constructor(
@@ -784,4 +796,58 @@ export interface PackMeta {
 		pack_format: number;
 		description: string;
 	};
+}
+
+export class FunctionAllocator {
+	readonly datapack: Datapack;
+	readonly namespace: Namespace | NamespacedID;
+
+	constructor(options: { datapack: Datapack, namespace: NamespacedID | Namespace }) { 
+		this.datapack = options.datapack;
+		this.namespace = options.namespace;
+	}
+
+	function(commands: DatapackFunctionProvider) {
+		const name = commands instanceof Function ? commands.name || 'untitled' : 'untitled';
+		const id = this.#idFromString(name);
+		return this.datapack.setFunction(id, commands);
+	}
+
+	addOnLoadFunction(commands: DatapackFunctionProvider) {
+		const fun = this.function(commands);
+		if (!this.datapack.onLoadFunctions) {
+			this.datapack.onLoadFunctions = new Tag([]);
+		}
+		this.datapack.onLoadFunctions.values.push(fun.namespacedId);
+		return fun;
+	}
+
+	addOnTickFunction(commands: DatapackFunctionProvider) {
+		const fun = this.function(commands);
+		if (!this.datapack.onTickFunctions) {
+			this.datapack.onTickFunctions = new Tag([]);
+		}
+		this.datapack.onTickFunctions.values.push(fun.namespacedId);
+		return fun;
+	}
+
+	#idFromString(name: string) {
+		const cleanedName = name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+		let id: NamespacedID;
+		let i = 0;
+		do {
+			id = this.#id(`${cleanedName}${i === 0 ? '' : i}`);
+			i++;
+		} while (this.datapack.functions.has(id));
+
+		return id;
+	}
+
+	#id(id: string) {
+		if (this.namespace instanceof Namespace) {
+			return this.namespace.id(id);
+		} else {
+			return this.namespace.childID(id);
+		}
+	}
 }

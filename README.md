@@ -14,5 +14,10 @@ Bun
 bun install mcpack-builder
 ```
 
+Deno
+```
+import { Datapack } from "npm:mcpack-builder"
+```
+
 ## Example Projects
 [3D Grapher](https://github.com/TheCymaera/mcpack-builder-3d-grapher/)
