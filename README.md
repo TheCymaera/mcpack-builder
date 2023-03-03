@@ -21,3 +21,5 @@ import { Datapack } from "npm:mcpack-builder"
 
 ## Example Projects
 [3D Grapher](https://github.com/TheCymaera/mcpack-builder-3d-grapher/)
+
+[Kinematic-Chain](https://github.com/TheCymaera/mcpack-builder-kinematic-chain)
