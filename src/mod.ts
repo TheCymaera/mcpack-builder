@@ -140,7 +140,7 @@ export class FunctionReference {
 		return new CustomCommand(`function ${this.#selector()}`);
 	}
 
-	scheduleAppendQueue(delay: Duration) {
+	scheduleAppend(delay: Duration) {
 		return new CustomCommand(`schedule function ${this.#selector()} ${delay.build()} append`);
 	}
 

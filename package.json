@@ -1,6 +1,6 @@
 {
 	"name": "mcpack-builder",
-	"version": "1.0.13",
+	"version": "1.0.14",
 	"description": "A utility for building Minecraft datapacks packs.",
 	"license": "MIT",
 	"type": "module",
