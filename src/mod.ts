@@ -1,15 +1,25 @@
+/**
+ * Diagnostics
+ * By default, this library logs to the console.
+ */
 export interface Logger {
 	log(message: string): void;
 	warn(message: string): void;
 	error(message: string): void;
 }
 
-
 let log: Logger = console;
+
+/**
+ * Set logger. Uses `console` by default.
+ */
 export function setLogger(logger: Logger) {
 	log = logger;
 }
 
+/**
+ * Represents a Minecraft namespace.
+ */
 export class Namespace {
 	constructor(public namespace: string) {}
 
@@ -26,6 +36,11 @@ export class Namespace {
 	}
 }
 
+/**
+ * Represents a Minecraft namespaced ID.
+ * @example
+ * NamespacedID.fromString(`minecraft:stone`)
+ */
 export class NamespacedID {
 	constructor(public namespace: string, public id: string) {
 		const errors = NamespacedID.validate(this.build());
@@ -43,10 +58,6 @@ export class NamespacedID {
 
 	build() {
 		return `${this.namespace}:${this.id}`;
-	}
-
-	toFunction() {
-		return new FunctionReference(this);
 	}
 
 	static fromString(namespacedId: string) {
@@ -72,6 +83,11 @@ export class NamespacedID {
 	}
 }
 
+/**
+ * Represents a Minecraft duration.
+ * @example
+ * Duration.ticks(20 * 3)
+ */
 export class Duration {
 	constructor(public value: number, public unit: string) {}
 
@@ -117,11 +133,6 @@ export class Duration {
 	}
 }
 
-export enum ScheduleMode {
-	Append = "append",
-	Replace = "replace",
-}
-
 export class FunctionReference {
 	constructor(public namespacedId: NamespacedID|TagReference) {}
 
@@ -129,8 +140,12 @@ export class FunctionReference {
 		return new CustomCommand(`function ${this.#selector()}`);
 	}
 
-	schedule(delay: Duration, mode = ScheduleMode.Replace) {
-		return new CustomCommand(`schedule function ${this.#selector()} ${delay.build()} ${mode}`);
+	scheduleAppendQueue(delay: Duration) {
+		return new CustomCommand(`schedule function ${this.#selector()} ${delay.build()} append`);
+	}
+
+	scheduleReplace(delay: Duration) {
+		return new CustomCommand(`schedule function ${this.#selector()} ${delay.build()} replace`);
 	}
 
 	scheduleClear() {
@@ -166,7 +181,12 @@ export class CustomCommand implements Command {
 	}
 }
 
-// alias for CustomCommand, e.g. command`tellraw @a "Hello World!"`
+/**
+ * Tagged template literal for commands. Automatically de-dents and removes new lines
+ * @example
+ * command`say hello world`
+ * new CustomCommand("say hello world")
+ */
 // deno-lint-ignore no-explicit-any
 export function command(strings: TemplateStringsArray, ...values: any[]) {
 	let string = "";
@@ -177,9 +197,15 @@ export function command(strings: TemplateStringsArray, ...values: any[]) {
 		}
 	}
 
-	return new CustomCommand(string);
+	return new CustomCommand(string.replace(/\n\s+/g, ""));
 }
 
+/**
+ * Represents a scoreboard tag.
+ * @example
+ * const tag = new ScoreboardTag("my_tag");
+ * yield tag.add(new EntitySelector().allPlayers());
+ */
 export class ScoreboardTag {
 	constructor(public tag: string) {}
 
@@ -196,6 +222,12 @@ export class ScoreboardTag {
 	}
 }
 
+/**
+ * A helper class for managing scoreboards.
+ * @example
+ * const scoreboard = new Scoreboard("my_scoreboard");
+ * const score = scoreboard.constant(5);
+ */
 export class ScoreAllocator {
 	public scoreboard: Scoreboard;
 	public prefix: string;
@@ -239,14 +271,9 @@ export class ScoreAllocator {
 	#usedNames = new Set<string>();
 }
 
-export class Comment implements Command {
-	constructor(public comment: string) {}
-
-	buildCommand() {
-		return `# ${this.comment}`;
-	}
-}
-
+/**
+ * Represents a scoreboard objective.
+ */
 export class Scoreboard {
 	public objective: string;
 	public criteria: string;
@@ -374,7 +401,7 @@ export class EntitySelector implements TargetSelector {
 }
 
 export class CustomSelector implements TargetSelector {
-	constructor(public selectorType: string, public selector: string) {}
+	constructor(public selector: string, public selectorType = "") {}
 
 	buildSelector() {
 		return this.selector;
@@ -400,6 +427,10 @@ export class NBTReference {
 	}) {
 		this.target = config.target;
 		this.path = config.path;
+
+		if (!this.target.selectorType) {
+			throw new Error('Selector type must be specified for NBTReference');
+		}
 	}
 
 	assignScore(score: ScoreReference, dataType: NumericDataType, scale: number) {
@@ -414,11 +445,14 @@ export class NBTReference {
 		return new CustomCommand(`data get ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} ${scale}`);
 	}
 
-	setValueLiteral(value: string) {
+	assignSNBT(value: string) {
 		return new CustomCommand(`data modify ${this.target.selectorType} ${this.target.buildSelector()} ${this.path} set value ${value}`);
 	}
 }
 
+/**
+ * Represents a score target.
+ */
 export class ScoreReference implements ExecuteStoreDestination {
 	constructor(public objective: string, public target: EntitySelector|CustomSelector) {}
 
@@ -472,21 +506,21 @@ export class ScoreReference implements ExecuteStoreDestination {
 
 	greaterThan(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.greaterThanOrEqualTo(other + 1));
+			return new ScoreInRange(this, FloatRange.greaterThanOrEqualTo(other + 1));
 		}
 		return new CompareScores(this, '>', other);
 	}
 
 	lessThan(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.lessThanOrEqualTo(other - 1));
+			return new ScoreInRange(this, FloatRange.lessThanOrEqualTo(other - 1));
 		}
 		return new CompareScores(this, '<', other);
 	}
 
 	equalTo(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.exactly(other));
+			return new ScoreInRange(this, FloatRange.exactly(other));
 		}
 		return new CompareScores(this, '=', other);
 	}
@@ -496,19 +530,19 @@ export class ScoreReference implements ExecuteStoreDestination {
 	 * @param max Inclusive
 	 */
 	between(min: number, max: number) {
-		return new ScoreInRange(this, NumberRange.between(min, max));
+		return new ScoreInRange(this, FloatRange.between(min, max));
 	}
 
 	lessThanOrEqualTo(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.lessThanOrEqualTo(other));
+			return new ScoreInRange(this, FloatRange.lessThanOrEqualTo(other));
 		}
 		return new CompareScores(this, '<=', other);
 	}
 
 	greaterThanOrEqualTo(other: ScoreReference|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, NumberRange.greaterThanOrEqualTo(other));
+			return new ScoreInRange(this, FloatRange.greaterThanOrEqualTo(other));
 		}
 		return new CompareScores(this, '>=', other);
 	}
@@ -522,7 +556,7 @@ export class ScoreReference implements ExecuteStoreDestination {
 	}
 }
 
-export class NumberRange {
+export class FloatRange {
 	private constructor(public min: number|undefined, public max: number|undefined) {}
 
 	build(): string {
@@ -533,19 +567,19 @@ export class NumberRange {
 	}
 
 	static lessThanOrEqualTo(max: number) {
-		return new NumberRange(undefined, max);
+		return new FloatRange(undefined, max);
 	}
 
 	static greaterThanOrEqualTo(min: number) {
-		return new NumberRange(min, undefined);
+		return new FloatRange(min, undefined);
 	}
 
 	static between(min: number, max: number) {
-		return new NumberRange(min, max);
+		return new FloatRange(min, max);
 	}
 
 	static exactly(value: number) {
-		return new NumberRange(value, value);
+		return new FloatRange(value, value);
 	}
 }
 
@@ -645,7 +679,7 @@ export class CompareScores implements ExecuteCondition {
 export class ScoreInRange implements ExecuteCondition {
 	constructor(
 		public score: ScoreReference,
-		public range: NumberRange,
+		public range: FloatRange,
 	) {}
 
 	buildExecuteCondition() {
@@ -823,13 +857,19 @@ export class Datapack {
 	}
 
 	build() {
+		const built = new Map<string, (Command|Command[])[]>();
+
 		for (const [namespacedId, commands] of this.functions) {
 			const path = `data/${namespacedId.namespace}/functions/${namespacedId.id}.mcfunction`;
 
 			this.functions.set(namespacedId, []);
 			const commandsResolved = Array.from(commands instanceof Function ? commands() : commands);
 
-			this.files.set(path, commandsResolved.flat().map(command => command.buildCommand()).join('\n'));
+			built.set(path, commandsResolved);
+		}
+
+		for (const [path, commands] of built) {
+			this.files.set(path, commands.flat().map(command => command.buildCommand()).join('\n'));
 		}
 
 		if (this.onLoadFunctions) {
