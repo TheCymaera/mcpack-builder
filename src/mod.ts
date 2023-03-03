@@ -166,6 +166,36 @@ export class CustomCommand implements Command {
 	}
 }
 
+// alias for CustomCommand, e.g. command`tellraw @a "Hello World!"`
+// deno-lint-ignore no-explicit-any
+export function command(strings: TemplateStringsArray, ...values: any[]) {
+	let string = "";
+	for (let i = 0; i < strings.length; i++) {
+		string += strings[i];
+		if (i < values.length) {
+			string += values[i];
+		}
+	}
+
+	return new CustomCommand(string);
+}
+
+export class ScoreboardTag {
+	constructor(public tag: string) {}
+
+	add(target: EntitySelector) {
+		return new CustomCommand(`tag ${target.buildSelector()} add ${this.tag}`);
+	}
+
+	remove(target: EntitySelector) {
+		return new CustomCommand(`tag ${target.buildSelector()} remove ${this.tag}`);
+	}
+
+	static list(target: EntitySelector) {
+		return new CustomCommand(`tag ${target.buildSelector()} list`);
+	}
+}
+
 export class ScoreAllocator {
 	public scoreboard: Scoreboard;
 	public prefix: string;
@@ -288,13 +318,18 @@ export class EntitySelector implements TargetSelector {
 		return this;
 	}
 
-	hasScoreboardTag(tag: string) {
-		this.#arguments.push(`tag=${tag}`);
+	isType(type: string) {
+		this.#arguments.push(`type=${type}`);
 		return this;
 	}
 
-	noScoreboardTag(tag: string) {
-		this.#arguments.push(`tag=!${tag}`);
+	hasScoreboardTag(tag: string|ScoreboardTag) {
+		this.#arguments.push(`tag=${tag instanceof ScoreboardTag ? tag.tag : tag}`);
+		return this;
+	}
+
+	noScoreboardTag(tag: string|ScoreboardTag) {
+		this.#arguments.push(`tag=!${tag instanceof ScoreboardTag ? tag.tag : tag}`);
 		return this;
 	}
 
@@ -537,6 +572,14 @@ export class Execute implements Command {
 		return this.append(new ExecuteCustomSubcommand("unless " + condition.buildExecuteCondition()));
 	}
 
+	ifExists(target: TargetSelector) {
+		return this.append(new ExecuteCustomSubcommand("if " + target.selectorType + " " + target.buildSelector()));
+	}
+
+	unlessExists(target: TargetSelector) {
+		return this.append(new ExecuteCustomSubcommand("unless " + target.selectorType + " " + target.buildSelector()));
+	}
+
 	storeResult(destination: ExecuteStoreDestination) {
 		return this.append(new ExecuteCustomSubcommand("store result " + destination.buildExecuteStoreDestination()));
 	}
@@ -761,7 +804,7 @@ export type DatapackFunctionProvider = Iterable<Command|Command[]> | (()=>Iterab
 
 export class Datapack {
 	files = new Map<string, string>();
-	functions = new Map<NamespacedID, (Command|Command[])[]>();
+	functions = new Map<NamespacedID, DatapackFunctionProvider>();
 	onLoadFunctions?: Tag;
 	onTickFunctions?: Tag;
 
@@ -774,9 +817,7 @@ export class Datapack {
 			throw new Error(`Function ${namespacedId.build()} already exists`);
 		}
 
-		this.functions.set(namespacedId, []);
-		const commandsResolved = Array.from(commands instanceof Function ? commands() : commands);
-		this.functions.get(namespacedId)!.push(...commandsResolved);
+		this.functions.set(namespacedId, commands);
 		
 		return new FunctionReference(namespacedId);
 	}
@@ -784,7 +825,11 @@ export class Datapack {
 	build() {
 		for (const [namespacedId, commands] of this.functions) {
 			const path = `data/${namespacedId.namespace}/functions/${namespacedId.id}.mcfunction`;
-			this.files.set(path, commands.flat().map(command => command.buildCommand()).join('\n'));
+
+			this.functions.set(namespacedId, []);
+			const commandsResolved = Array.from(commands instanceof Function ? commands() : commands);
+
+			this.files.set(path, commandsResolved.flat().map(command => command.buildCommand()).join('\n'));
 		}
 
 		if (this.onLoadFunctions) {
@@ -839,6 +884,15 @@ export class FunctionAllocator {
 		return fun;
 	}
 
+	#hasId(id: NamespacedID) {
+		for (const [namespacedId] of this.datapack.functions) {
+			if (namespacedId.build() === id.build()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	#idFromString(name: string) {
 		const cleanedName = name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
 		let id: NamespacedID;
@@ -846,7 +900,7 @@ export class FunctionAllocator {
 		do {
 			id = this.#id(`${cleanedName}${i === 0 ? '' : i}`);
 			i++;
-		} while (this.datapack.functions.has(id));
+		} while (this.#hasId(id));
 
 		return id;
 	}
