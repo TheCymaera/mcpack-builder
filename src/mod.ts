@@ -308,7 +308,7 @@ export class Scoreboard {
 	}
 
 	custom(player: string) {
-		return new ScoreReference(this.objective, new CustomSelector("", player));
+		return new ScoreReference(this.objective, new CustomSelector(player));
 	}
 
 	static verifyObjective(objective: string) {
