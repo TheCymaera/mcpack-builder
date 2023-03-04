@@ -20,6 +20,7 @@ export class NBTSelector {
 		return new ExecuteCustomStoreDestination(
 			this.target.nbtHolderType + " " + 
 			this.target.buildNBTHolderSelector() + " " + 
+			this.path + " " +
 			dataType + " " + 
 			scale
 		);

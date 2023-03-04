@@ -1,6 +1,6 @@
 import { Command, CommandGroup, command } from "./Command.ts";
 import { Duration } from "./Duration.ts";
-import { NamespacedID } from "./Namespace.ts";
+import { Namespace, NamespacedID } from "./Namespace.ts";
 import { Tag } from "./Tag.ts";
 
 export class Datapack {
@@ -10,9 +10,36 @@ export class Datapack {
 	onTickFunctions?: Tag;
 	packMeta?: PackMeta;
 
+	internalNamespace?: NamespacedID|Namespace;
+
 	mcfunction(namespacedID: NamespacedID) {
 		const out = new MCFunctionDeclaration(this, namespacedID);
 		this.mcfunctions.set(namespacedID, out);
+		return out;
+	}
+
+	internalMcfunction(label = "untitled") {
+		if (!this.internalNamespace) throw new Error('datapack.internalId is not set.');
+
+		const labelCleaned = 
+		label.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
+		.replace(/[^a-zA-Z0-9]/g, '_');
+
+		const hasId = (id: NamespacedID)=>{
+			for (const [other] of this.mcfunctions) {
+				if (other.toString() === id.toString()) return true;
+			}
+			return false;
+		}
+
+		let id = this.internalNamespace.childID(labelCleaned);
+		let i = 0;
+		while (hasId(id)) {
+			id = this.internalNamespace.childID(labelCleaned + "_" + ++i);
+		}
+
+		const out = this.mcfunction(id);
+		out.inline = true;
 		return out;
 	}
 
@@ -31,7 +58,7 @@ export class Datapack {
 			}).join('\n');
 			files.set(path, textFile);
 
-			let canInline = declaration.inlined;
+			let canInline = declaration.inline;
 
 			if (declaration.onLoad) {
 				canInline = false;
@@ -61,17 +88,23 @@ export class Datapack {
 
 			const namespacedId = declaration.namespacedID.toString();
 			const command = files.get(path)!.trim();
-			files.delete(path);
 
+			// inline function calls
 			for (const [path, file] of files) {
-				// replace "mcpack-builder:inline {id}"" with command
-				files.set(path, file.replaceAll(`mcpack-builder:inline ${namespacedId}`, command));
+				// replace "^execute ... run function {id}" with "execute ... run {command}"
+				files.set(path, file.replace(new RegExp(`^execute (.*) run function ${namespacedId}$`, 'gm'), `execute $1 run ${command}`));
 			}
-		}
 
-		for (const [path, file] of files) {
-			// replace "mcpack-builder:inline {id}" with "function {id}"
-			files.set(path, file.replaceAll("mcpack-builder:inline", 'function'));
+			// count references to this function
+			let idReferenceCount = 0;
+			for (const [, file] of files) {
+				idReferenceCount += file.split(namespacedId).length - 1;
+			}
+
+			// remove if no more references
+			if (idReferenceCount === 0) {
+				files.delete(path);
+			}
 		}
 
 
@@ -95,7 +128,7 @@ export interface PackMeta {
 }
 
 export class MCFunctionDeclaration {
-	inlined = false;
+	inline = false;
 	onLoad = false;
 	onTick = false;
 	commands: (Command | CommandGroup)[] = [];
@@ -118,11 +151,6 @@ export class MCFunctionDeclaration {
 
 	run() {
 		return command`function ${this.namespacedID}`;
-	}
-
-	inline() {
-		this.inlined = true;
-		return command`mcpack-builder:inline ${this.namespacedID}`;
 	}
 
 	scheduleAppend(delay: Duration) {

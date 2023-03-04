@@ -69,18 +69,3 @@ export class NamespacedID {
 		return errors;
 	}
 }
-
-export class NamespacedIDGenerator {
-	constructor(public namespace: Namespace|NamespacedID) {}
-
-	create(label = "untitled") {
-		const labelCleaned = 
-		label.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
-		.replace(/[^a-zA-Z0-9]/g, '_');
-
-		const id = labelCleaned + "_" + this.#i++;
-		return this.namespace.childID(id);
-	}
-
-	#i = 0;
-}
