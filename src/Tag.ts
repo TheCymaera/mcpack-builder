@@ -9,6 +9,10 @@ export class Tag {
 			values: this.values.map(id => id.toString())
 		});
 	}
+
+	clone() {
+		return new Tag(this.values.slice(), this.replace);
+	}
 }
 
 export class TagSelector {

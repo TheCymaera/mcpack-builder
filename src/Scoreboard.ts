@@ -35,11 +35,11 @@ export class Scoreboard {
 		return command`scoreboard objectives remove ${this.objective}`;
 	}
 
-	entity(target: EntitySelector) {
+	entities(target: EntitySelector) {
 		return new ScoreSelector(this.objective, target);
 	}
 
-	custom(player: string) {
+	id(player: string) {
 		return new ScoreSelector(this.objective, EntitySelector.id(player));
 	}
 

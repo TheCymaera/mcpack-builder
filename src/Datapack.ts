@@ -18,6 +18,10 @@ export class Datapack {
 		return out;
 	}
 
+	/**
+	 * Create an internal function. Will be inlined if possible.
+	 * @param label A preferred name for debugging purposes
+	 */
 	internalMcfunction(label = "untitled") {
 		if (!this.internalNamespace) throw new Error('datapack.internalId is not set.');
 
@@ -49,12 +53,15 @@ export class Datapack {
 
 		if (this.packMeta) files.set('pack.mcmeta', JSON.stringify(this.packMeta));
 
+		let onLoad = this.onLoadFunctions?.clone();
+		let onTick = this.onTickFunctions?.clone();
+
 		const inlined = new Set<MCFunctionDeclaration>();
 		for (const [namespacedId, declaration] of this.mcfunctions) {
 			const path = `data/${namespacedId.namespace}/functions/${namespacedId.id}.mcfunction`;
 			const textFile = declaration.commands.map(command => {
 				if (command instanceof CommandGroup) return command.commands.map(command => command.buildCommand()).join('\n');
-				return command.buildCommand()
+				return command.buildCommand();
 			}).join('\n');
 			files.set(path, textFile);
 
@@ -62,14 +69,14 @@ export class Datapack {
 
 			if (declaration.onLoad) {
 				canInline = false;
-				if (!this.onLoadFunctions) this.onLoadFunctions = new Tag([]);
-				this.onLoadFunctions.values.push(namespacedId);
+				if (!onLoad) onLoad = new Tag([]);
+				onLoad.values.push(namespacedId);
 			}
 
 			if (declaration.onTick) {
 				canInline = false;
-				if (!this.onTickFunctions) this.onTickFunctions = new Tag([]);
-				this.onTickFunctions.values.push(namespacedId);
+				if (!onTick) onTick = new Tag([]);
+				onTick.values.push(namespacedId);
 			}
 
 			// if more than 1 line
@@ -108,12 +115,12 @@ export class Datapack {
 		}
 
 
-		if (this.onLoadFunctions) {
-			files.set('data/minecraft/tags/functions/load.json', this.onLoadFunctions.build());
+		if (onLoad) {
+			files.set('data/minecraft/tags/functions/load.json', onLoad.build());
 		}
 
-		if (this.onTickFunctions) {
-			files.set('data/minecraft/tags/functions/tick.json', this.onTickFunctions.build());
+		if (onTick) {
+			files.set('data/minecraft/tags/functions/tick.json', onTick.build());
 		}
 		
 		return { files };

@@ -5,7 +5,7 @@ import { stringFromTemplateParams } from "./utils.ts";
 
 export class EntitySelector implements NBTHolder {
 	public nbtHolderType = 'entity';
-	constructor(variable: string) {
+	private constructor(variable: string) {
 		this.#variable = variable;
 	}
 
@@ -60,7 +60,7 @@ export class EntitySelector implements NBTHolder {
 
 	append(clause: string) {
 		if (this.#variable[0] !== "@") throw new Error("Cannot add clauses to a player name entity selector");
-		this.#arguments.push(clause);
+		if (clause) this.#arguments.push(clause);
 		return this;
 	}
 
@@ -103,8 +103,8 @@ export class EntitySelector implements NBTHolder {
 /**
  * Tagged template literal for entity selectors.
  * @example
- * const selector = entity`@a`;
+ * const selector = entities`@a`;
  */
-export function entity(strings: TemplateStringsArray, ...values: any[]) {
-	return new EntitySelector(stringFromTemplateParams(strings, ...values));
+export function entities(strings: TemplateStringsArray, ...values: any[]) {
+	return EntitySelector.fromString(stringFromTemplateParams(strings, ...values));
 }

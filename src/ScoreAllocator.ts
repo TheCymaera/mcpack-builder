@@ -34,13 +34,13 @@ export class ScoreAllocator {
 		} while (this.#usedNames.has(name));
 		this.#usedNames.add(name);
 
-		const score = this.scoreboard.custom(name);
+		const score = this.scoreboard.id(name);
 		return score
 	}
 
 	constant(value: number) {
 		const name = `${this.constantPrefix}${value}`;
-		const score = this.scoreboard.custom(name);
+		const score = this.scoreboard.id(name);
 		if (!this.constants.has(value)) {
 			this.initConstants.commands.push(score.assignConstant(value));
 		}
