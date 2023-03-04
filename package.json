@@ -1,6 +1,6 @@
 {
 	"name": "mcpack-builder",
-	"version": "1.0.14",
+	"version": "1.0.15-dev.0",
 	"description": "A utility for building Minecraft datapacks packs.",
 	"license": "MIT",
 	"type": "module",
@@ -10,8 +10,8 @@
 		"./dst/**"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.json",
-		"watch": "tsc -w -p tsconfig.json"
+		"build": "rollup -c",
+		"watch": "rollup -w -c"
 	},
 	"repository": {
 		"type": "git",
@@ -19,5 +19,10 @@
 	},
 	"bugs": {
 		"url": "https://github.com/TheCymaera/mcpack-builder/issues"
+	},
+	"devDependencies": {
+		"@rollup/plugin-typescript": "^11.0.0",
+		"tslib": "^2.5.0",
+		"typescript": "5.1.0-dev.20230304"
 	}
 }

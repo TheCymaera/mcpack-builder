@@ -19,6 +19,9 @@
 
 		"skipDefaultLibCheck": true,
 
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+
 		"lib": ["ESNext", "DOM"],
 		"baseUrl": ".",
 	}
