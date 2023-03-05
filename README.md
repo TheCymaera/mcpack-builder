@@ -3,7 +3,7 @@ A utility for building Minecraft datapacks packs.
 
 This library is in alpha. There will be breaking changes.
 
-In the past, alpha versions were erroneously published to `1.0.x`. New versions will be published to `1.0.15-alpha.x` and the final release will be published to `1.0.15`.
+In the past, alpha versions were erroneously published to `1.0.x`. New versions will be published to `1.0.15-dev.x` and the final release will be published to `1.0.15`.
 
 ## Installation
 Deno
