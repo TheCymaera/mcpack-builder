@@ -2,10 +2,14 @@ import { Command, CommandGroup, command } from "./Command.ts";
 import { Duration } from "./Duration.ts";
 import { Namespace, NamespacedID } from "./Namespace.ts";
 import { Tag } from "./Tag.ts";
+import { NormalizedMap } from "./utils.ts";
 
 export class Datapack {
 	staticFiles = new Map<string, string>();
-	mcfunctions = new Map<NamespacedID, MCFunctionDeclaration>();
+	mcfunctions = new NormalizedMap<NamespacedID, MCFunctionDeclaration>([], {
+		coerceKey: (id: NamespacedID) => id.toString(),
+		reviveKey: (id: string) => NamespacedID.fromString(id)
+	});
 	onLoadFunctions?: Tag;
 	onTickFunctions?: Tag;
 	packMeta?: PackMeta;
@@ -29,16 +33,9 @@ export class Datapack {
 		label.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
 		.replace(/[^a-zA-Z0-9]/g, '_');
 
-		const hasId = (id: NamespacedID)=>{
-			for (const [other] of this.mcfunctions) {
-				if (other.toString() === id.toString()) return true;
-			}
-			return false;
-		}
-
 		let id = this.internalNamespace.childID(labelCleaned);
 		let i = 0;
-		while (hasId(id)) {
+		while (this.mcfunctions.has(id)) {
 			id = this.internalNamespace.childID(labelCleaned + "_" + ++i);
 		}
 
@@ -69,14 +66,14 @@ export class Datapack {
 
 			if (declaration.onLoad) {
 				canInline = false;
-				if (!onLoad) onLoad = new Tag([]);
-				onLoad.values.push(namespacedId);
+				if (!onLoad) onLoad = new Tag();
+				onLoad.values.add(namespacedId);
 			}
 
 			if (declaration.onTick) {
 				canInline = false;
-				if (!onTick) onTick = new Tag([]);
-				onTick.values.push(namespacedId);
+				if (!onTick) onTick = new Tag();
+				onTick.values.add(namespacedId);
 			}
 
 			// if more than 1 line
