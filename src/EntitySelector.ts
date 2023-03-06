@@ -1,4 +1,4 @@
-import { ExecuteCustomCondition } from "./Execute.ts";
+import { ExecuteCustomCondition } from "./ExecuteCommand.ts";
 import { NBTHolder } from "./NBTHolder.ts";
 import { ScoreboardTag } from "./ScoreboardTag.ts";
 import { stringFromTemplateParams } from "./utils.ts";

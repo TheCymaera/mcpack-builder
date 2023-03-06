@@ -19,7 +19,7 @@ export class Coordinate {
 		return new Coordinate(`~${x}`, `~${y}`, `~${z}`);
 	}
 
-	static rayCast(left: number, up: number, forward: number) {
+	static local(left: number, up: number, forward: number) {
 		return new Coordinate(`^${left}`, `^${up}`, `^${forward}`);
 	}
 

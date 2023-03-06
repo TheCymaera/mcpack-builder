@@ -1,5 +1,5 @@
 import { command } from "./Command.ts";
-import { Execute, ExecuteCustomStoreDestination } from "./Execute.ts";
+import { ExecuteCommand, ExecuteCustomStoreDestination } from "./ExecuteCommand.ts";
 import { NBTHolder } from "./NBTHolder.ts";
 import { NumericDataType } from "./NumericDataType.ts";
 import { ScoreSelector } from "./ScoreSelector.ts";
@@ -27,7 +27,7 @@ export class NBTSelector {
 	}
 
 	assignScore(score: ScoreSelector, dataType: NumericDataType, scale: number) {
-		return new Execute().storeResult(this.toExecuteStoreDestination(dataType, scale)).run(score.getValue());
+		return new ExecuteCommand().storeResult(this.toExecuteStoreDestination(dataType, scale)).run(score.getValue());
 	}
 
 	assignNBT(nbt: NBTSelector) {

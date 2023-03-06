@@ -1,0 +1,1 @@
+execute if score @p test matches 1..1

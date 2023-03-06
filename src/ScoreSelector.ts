@@ -1,7 +1,7 @@
 import { Command, command } from "./Command.ts";
 import { EntitySelector } from "./EntitySelector.ts";
-import { Execute, ExecuteCondition, ExecuteStoreDestination } from "./Execute.ts";
-import { FloatRange } from "./FloatRange.ts";
+import { ExecuteCommand, ExecuteCondition, ExecuteStoreDestination } from "./ExecuteCommand.ts";
+import { IntRange } from "./IntRange.ts";
 
 /**
  * Represents a score target.
@@ -61,21 +61,21 @@ export class ScoreSelector implements ExecuteStoreDestination {
 
 	greaterThan(other: ScoreSelector|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, FloatRange.greaterThanOrEqualTo(other + 1));
+			return new ScoreInRange(this, IntRange.greaterThanOrEqualTo(other + 1));
 		}
 		return new CompareScores(this, '>', other);
 	}
 
 	lessThan(other: ScoreSelector|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, FloatRange.lessThanOrEqualTo(other - 1));
+			return new ScoreInRange(this, IntRange.lessThanOrEqualTo(other - 1));
 		}
 		return new CompareScores(this, '<', other);
 	}
 
 	equalTo(other: ScoreSelector|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, FloatRange.exactly(other));
+			return new ScoreInRange(this, IntRange.exactly(other));
 		}
 		return new CompareScores(this, '=', other);
 	}
@@ -85,25 +85,25 @@ export class ScoreSelector implements ExecuteStoreDestination {
 	 * @param max Inclusive
 	 */
 	between(min: number, max: number) {
-		return new ScoreInRange(this, FloatRange.between(min, max));
+		return new ScoreInRange(this, IntRange.between(min, max));
 	}
 
 	lessThanOrEqualTo(other: ScoreSelector|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, FloatRange.lessThanOrEqualTo(other));
+			return new ScoreInRange(this, IntRange.lessThanOrEqualTo(other));
 		}
 		return new CompareScores(this, '<=', other);
 	}
 
 	greaterThanOrEqualTo(other: ScoreSelector|number) {
 		if (typeof other === 'number') {
-			return new ScoreInRange(this, FloatRange.greaterThanOrEqualTo(other));
+			return new ScoreInRange(this, IntRange.greaterThanOrEqualTo(other));
 		}
 		return new CompareScores(this, '>=', other);
 	}
 
 	assignCommand(command: Command) {
-		return new Execute().storeResult(this).run(command);
+		return new ExecuteCommand().storeResult(this).run(command);
 	}
 
 	buildExecuteStoreDestination() {
@@ -130,7 +130,7 @@ export class CompareScores implements ExecuteCondition {
 export class ScoreInRange implements ExecuteCondition {
 	constructor(
 		public score: ScoreSelector,
-		public range: FloatRange,
+		public range: IntRange,
 	) {}
 
 	buildExecuteCondition() {
