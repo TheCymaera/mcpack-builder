@@ -135,4 +135,3 @@ export class NormalizedMap<K, V> implements Map<K, V> {
 
 	[Symbol.toStringTag]: string;
 }
-	

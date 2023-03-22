@@ -56,7 +56,7 @@ export class ExecuteCommand implements Command {
 export function execute(strings?: TemplateStringsArray, ...values: any[]) {
 	if (!strings) return new ExecuteCommand();
 	const string = stringFromTemplateParams(strings, ...values);
-	return new ExecuteCommand().appendString(string);
+	return new ExecuteCommand().appendString(string.replaceAll(/\n\s+/g, ""));
 }
 
 export interface ExecuteSubCommand {

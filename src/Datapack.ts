@@ -6,10 +6,7 @@ import { NormalizedMap } from "./utils.ts";
 
 export class Datapack {
 	staticFiles = new Map<string, string>();
-	mcfunctions = new NormalizedMap<NamespacedID, MCFunctionDeclaration>([], {
-		coerceKey: (id: NamespacedID) => id.toString(),
-		reviveKey: (id: string) => NamespacedID.fromString(id)
-	});
+	mcfunctions = new NamespacedIDMap<MCFunctionDeclaration>();
 	onLoadFunctions?: Tag;
 	onTickFunctions?: Tag;
 	packMeta?: PackMeta;
@@ -17,7 +14,7 @@ export class Datapack {
 	internalNamespace?: NamespacedID|Namespace;
 
 	mcfunction(namespacedID: NamespacedID) {
-		const out = new MCFunctionDeclaration(this, namespacedID);
+		const out = new MCFunctionDeclaration(namespacedID);
 		this.mcfunctions.set(namespacedID, out);
 		return out;
 	}
@@ -45,72 +42,99 @@ export class Datapack {
 	}
 
 	build() {
-		// generate files
-		const files = new Map<string, string>(this.staticFiles);
-
-		if (this.packMeta) files.set('pack.mcmeta', JSON.stringify(this.packMeta));
-
 		let onLoad = this.onLoadFunctions?.clone();
 		let onTick = this.onTickFunctions?.clone();
 
-		const inlined = new Set<MCFunctionDeclaration>();
-		for (const [namespacedId, declaration] of this.mcfunctions) {
-			const path = `data/${namespacedId.namespace}/functions/${namespacedId.id}.mcfunction`;
-			const textFile = declaration.commands.map(command => {
-				if (command instanceof CommandGroup) return command.commands.map(command => command.buildCommand()).join('\n');
-				return command.buildCommand();
-			}).join('\n');
-			files.set(path, textFile);
-
-			let canInline = declaration.inline;
-
-			if (declaration.onLoad) {
-				canInline = false;
-				if (!onLoad) onLoad = new Tag();
-				onLoad.values.add(namespacedId);
-			}
-
-			if (declaration.onTick) {
-				canInline = false;
-				if (!onTick) onTick = new Tag();
-				onTick.values.add(namespacedId);
-			}
-
-			// if more than 1 line
-			if (textFile.split('\n').length > 1) canInline = false;
-
-			// if first line is comment
-			if (textFile.startsWith('#')) canInline = false;
-
-			if (canInline) {
-				inlined.add(declaration);
+		const builtFunctions = new NamespacedIDMap<string>();
+		
+		const context = {
+			buildFunction(declaration: MCFunctionDeclaration) {
+				const textFile = declaration.commands.buildCommands().join('\n');
+				builtFunctions.set(declaration.namespacedID, textFile);
+	
+				if (declaration.onLoad) {
+					if (!onLoad) onLoad = new Tag();
+					onLoad.values.add(declaration.namespacedID);
+				}
+	
+				if (declaration.onTick) {
+					if (!onTick) onTick = new Tag();
+					onTick.values.add(declaration.namespacedID);
+				}
 			}
 		}
 
-		for (const declaration of inlined) {
-			const path = `data/${declaration.namespacedID.namespace}/functions/${declaration.namespacedID.id}.mcfunction`;
+		for (const declaration of this.mcfunctions.values()) {
+			context.buildFunction(declaration);
+		}
 
-			const namespacedId = declaration.namespacedID.toString();
-			const command = files.get(path)!.trim();
+		const countOccurrences = (namespacedId: NamespacedID) => {
+			let count = 0;
+
+			if (onLoad?.values.has(namespacedId)) count++;
+			if (onTick?.values.has(namespacedId)) count++;
+
+			for (const text of builtFunctions.values()) {
+				count += text.split(namespacedId.toString()).length - 1;
+			}
+
+			return count;
+		}
+
+		const replaceInAllFunctions = (pattern: RegExp, replacement: string) => {
+			for (const [namespacedId, text] of builtFunctions) {
+				builtFunctions.set(namespacedId, text.replace(pattern, replacement));
+			}
+		}
+
+		// inline execute function calls
+		for (const [namespacedId, text] of builtFunctions) {
+			// if inline-able
+			if (!this.mcfunctions.get(namespacedId)!.inline) continue;
+
+			// if 1 line
+			if (text.split('\n').length !== 1) continue;
+
+			// if line is not a comment
+			if (text.startsWith('#')) continue;
+
+			// inline execute calls
+			const command = builtFunctions.get(namespacedId)!.trim();
+
+			// replace "^execute ... run function {id}" with "execute ... run {command}"
+			replaceInAllFunctions(new RegExp(`^execute (.*) run function ${namespacedId}$`, 'gm'), `execute $1 run ${command}`);
+		}
+
+		// inline single use functions
+		for (const [namespacedId, _] of builtFunctions) {
+			// if inline-able
+			if (!this.mcfunctions.get(namespacedId)!.inline) continue;
+
+			// if 1 reference
+			if (countOccurrences(namespacedId) !== 1) continue;
 
 			// inline function calls
-			for (const [path, file] of files) {
-				// replace "^execute ... run function {id}" with "execute ... run {command}"
-				files.set(path, file.replace(new RegExp(`^execute (.*) run function ${namespacedId}$`, 'gm'), `execute $1 run ${command}`));
-			}
-
-			// count references to this function
-			let idReferenceCount = 0;
-			for (const [, file] of files) {
-				idReferenceCount += file.split(namespacedId).length - 1;
-			}
-
-			// remove if no more references
-			if (idReferenceCount === 0) {
-				files.delete(path);
-			}
+			const commands = builtFunctions.get(namespacedId)!.trim();
+			replaceInAllFunctions(new RegExp(`^function ${namespacedId}$`, 'gm'), commands + "\n")
 		}
 
+		// remove unused functions
+		for (const [namespacedId, _] of builtFunctions) {
+			// if inline-able
+			if (!this.mcfunctions.get(namespacedId)!.inline) continue;
+
+			// if 0 references
+			if (countOccurrences(namespacedId) !== 0) continue;
+			
+			builtFunctions.delete(namespacedId);
+		}
+
+
+		const files = new Map<string, string>(this.staticFiles);
+
+		if (this.packMeta) {
+			files.set('pack.mcmeta', JSON.stringify(this.packMeta));
+		}
 
 		if (onLoad) {
 			files.set('data/minecraft/tags/functions/load.json', onLoad.build());
@@ -118,6 +142,10 @@ export class Datapack {
 
 		if (onTick) {
 			files.set('data/minecraft/tags/functions/tick.json', onTick.build());
+		}
+
+		for (const [namespacedId, text] of builtFunctions) {
+			files.set(`data/${namespacedId.namespace}/functions/${namespacedId.id}.mcfunction`, text);
 		}
 		
 		return { files };
@@ -135,8 +163,8 @@ export class MCFunctionDeclaration {
 	inline = false;
 	onLoad = false;
 	onTick = false;
-	commands: (Command | CommandGroup)[] = [];
-	constructor(public datapack: Datapack, public namespacedID: NamespacedID) {}
+	commands = new CommandGroup;
+	constructor(public namespacedID: NamespacedID) {}
 
 	setOnLoad(boolean: boolean) {
 		this.onLoad = boolean;
@@ -149,7 +177,7 @@ export class MCFunctionDeclaration {
 	}
 
 	set(provider: ()=> Iterable<Command|CommandGroup>) {
-		this.commands = Array.from(provider());
+		this.commands.commands = Array.from(provider());
 		return this;
 	}
 
@@ -167,5 +195,14 @@ export class MCFunctionDeclaration {
 
 	scheduleClear() {
 		return command`schedule clear ${this.namespacedID}`;
+	}
+}
+
+class NamespacedIDMap<T> extends NormalizedMap<NamespacedID, T> {
+	constructor() {
+		super([], {
+			coerceKey: (id: NamespacedID) => id.toString(),
+			reviveKey: (id: string) => NamespacedID.fromString(id)
+		});
 	}
 }

@@ -14,10 +14,6 @@ export class CustomCommand implements Command {
 
 		return this.command;
 	}
-
-	static fromMultilineString(command: string) {
-		return new CustomCommand(command.replaceAll(/\n\s+/g, ""));
-	}
 }
 
 /**
@@ -26,9 +22,23 @@ export class CustomCommand implements Command {
  * command`say hello world`
  */
 export function command(strings: TemplateStringsArray, ...values: any[]) {
-	return CustomCommand.fromMultilineString(stringFromTemplateParams(strings, ...values));
+	return new CustomCommand(stringFromTemplateParams(strings, ...values).replaceAll(/\n\s+/g, ""));
 }
 
 export class CommandGroup {
-	constructor(public commands: Command[] = []) {}
+	constructor(public commands: (Command | CommandGroup)[] = []) {}
+
+	buildCommands(): string[] {
+		const out: string[] = [];
+
+		for (const command of this.commands) {
+			if (command instanceof CommandGroup) {
+				out.push(...command.buildCommands());
+			} else {
+				out.push(command.buildCommand());
+			}
+		}
+
+		return out;
+	}
 }
