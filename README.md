@@ -20,3 +20,5 @@ npm install mcpack-builder@alpha
 [3D Grapher](https://github.com/TheCymaera/mcpack-builder-3d-grapher/)
 
 [Kinematic Chain](https://github.com/TheCymaera/mcpack-builder-kinematic-chain)
+
+[Mastermind / Wordle](https://github.com/TheCymaera/mcpack-builder-mastermind)
