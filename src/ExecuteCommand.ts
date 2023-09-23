@@ -1,8 +1,8 @@
-import { Command } from "./Command.ts";
 import { EntitySelector } from "./EntitySelector.ts";
+import { BuildContext, MCCommand, MCFunction } from "./MCCommand.ts";
 import { stringFromTemplateParams } from "./utils.ts";
 
-export class ExecuteCommand implements Command {
+export class ExecuteCommand implements MCCommand {
 	constructor(public subcommands: ExecuteSubCommand[] = []) {}
 	append(subcommand: ExecuteSubCommand) {
 		this.subcommands.push(subcommand);
@@ -38,14 +38,28 @@ export class ExecuteCommand implements Command {
 		return this.appendString("store success " + destination.buildExecuteStoreDestination());
 	}
 
-	run(command: Command) {
-		return this.appendString("run " + command.buildCommand());
+	runFunction(functionName: MCFunction) {
+		return this.run(functionName.run());
 	}
 
-	buildCommand() {
-		const subcommandString = this.subcommands.map(subcommand => subcommand.buildExecuteSubCommand()).join(' ');
+	run(command: MCCommand) {
+		const replacement = `__${this.#commands.length}__`;
+		this.#commands.push([replacement, command]);
+		return this.appendString("run " + replacement);
+	}
+
+	buildCommand(context: BuildContext) {
+		let subcommandString = this.subcommands.map(subcommand => subcommand.buildExecuteSubCommand()).join(' ');
+
+		// Replace all the run commands
+		for (const [replacement, command] of this.#commands) {
+			subcommandString = subcommandString.replaceAll(replacement, command.buildCommand(context));
+		}
+
 		return `execute ${subcommandString}`;
 	}
+
+	#commands: [string, MCCommand][] = [];
 }
 
 /**

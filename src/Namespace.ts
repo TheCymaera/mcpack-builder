@@ -68,4 +68,8 @@ export class NamespacedID {
 
 		return errors;
 	}
+
+	static randomUUID() {
+		return new NamespacedID("mcpack-builder", crypto.randomUUID());
+	}
 }

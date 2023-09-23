@@ -1,71 +1,105 @@
-import { Command, CommandGroup, command } from "./Command.ts";
-import { Duration } from "./Duration.ts";
-import { Namespace, NamespacedID } from "./Namespace.ts";
+import { NamespacedID } from "./Namespace.ts";
 import { Tag } from "./Tag.ts";
-import { NormalizedMap } from "./utils.ts";
+import { BuildContext, MCFunction } from "./MCCommand.ts";
+import { namespacedIDMap } from "./utils.ts";
 
 export class Datapack {
-	staticFiles = new Map<string, string>();
-	mcfunctions = new NamespacedIDMap<MCFunctionDeclaration>();
+	readonly staticFiles = new Map<string, string>();
+	readonly mcfunctions = namespacedIDMap<MCFunction>();
 	onLoadFunctions?: Tag;
 	onTickFunctions?: Tag;
 	packMeta?: PackMeta;
 
-	internalNamespace?: NamespacedID|Namespace;
-
-	mcfunction(namespacedID: NamespacedID) {
-		const out = new MCFunctionDeclaration(namespacedID);
-		this.mcfunctions.set(namespacedID, out);
-		return out;
+	readonly internalFunctions: MCFunction[] = [];
+	addOnLoadFunction(fun: NamespacedID|MCFunction) {
+		if (!this.onLoadFunctions) this.onLoadFunctions = new Tag();
+		this.onLoadFunctions.values.add(fun instanceof MCFunction ? fun.namespacedID : fun);
+		if (fun instanceof MCFunction) this.internalFunctions.push(fun);
+		return this;
 	}
 
-	/**
-	 * Create an internal function. Will be inlined if possible.
-	 * @param label A preferred name for debugging purposes
-	 */
-	internalMcfunction(label = "untitled") {
-		if (!this.internalNamespace) throw new Error('datapack.internalId is not set.');
+	addOnTickFunction(fun: NamespacedID|MCFunction) {
+		if (!this.onTickFunctions) this.onTickFunctions = new Tag();
+		this.onTickFunctions.values.add(fun instanceof MCFunction ? fun.namespacedID : fun);
+		if (fun instanceof MCFunction) this.internalFunctions.push(fun);
+		return this;
+	}
 
-		const labelCleaned = 
-		label.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
-		.replace(/[^a-zA-Z0-9]/g, '_');
+	build(options: { internalNamespace?: NamespacedID } = {}) {
+		// build functions
+		const builtFunctions = namespacedIDMap<string>();
+		
+		const context: BuildContext = { mcfunctions: [] }
 
-		let id = this.internalNamespace.childID(labelCleaned);
-		let i = 0;
-		while (this.mcfunctions.has(id)) {
-			id = this.internalNamespace.childID(labelCleaned + "_" + ++i);
+		function buildFunction(value: MCFunction) {
+			if (builtFunctions.has(value.namespacedID)) return;
+
+			const lines: string[] = [];
+			for (const command of value.commands) {
+				const commandString = command.buildCommand(context);
+				if (commandString.startsWith("/")) {
+					console.warn(`Command "${command}" starts with a slash. This is invalid syntax in datapack functions.`);
+				}
+				lines.push(commandString);
+			}
+			builtFunctions.set(value.namespacedID, lines.join('\n'));
 		}
 
-		const out = this.mcfunction(id);
-		out.inline = true;
-		return out;
-	}
+		for (const declaration of this.mcfunctions.values()) buildFunction(declaration);
+		for (const declaration of this.internalFunctions) buildFunction(declaration);
+		for (const declaration of context.mcfunctions) buildFunction(declaration);
 
-	build() {
+		const getIdFromLabel = (label: string, internalNamespace: NamespacedID) => {
+			const labelCleaned =
+			label.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase()
+			.replace(/[^a-zA-Z0-9]/g, '_') || "untitled";
+
+			let id = internalNamespace.childID(labelCleaned);
+			let i = 0;
+			while (builtFunctions.has(id)) {
+				id = internalNamespace.childID(labelCleaned + "_" + ++i);
+			}
+
+			return id;
+		}
+
 		let onLoad = this.onLoadFunctions?.clone();
 		let onTick = this.onTickFunctions?.clone();
+		const renameUUID = (oldId: NamespacedID, newId: NamespacedID) => {
+			if (onLoad?.values.has(oldId)) {
+				onLoad.values.delete(oldId);
+				onLoad.values.add(newId);
+			}
+			if (onTick?.values.has(oldId)) {
+				onTick.values.delete(oldId);
+				onTick.values.add(newId);
+			}
+			
+			for (const [namespacedId, text] of builtFunctions) {
+				builtFunctions.set(namespacedId, text.replaceAll(oldId.toString(), newId.toString()));
+			}
 
-		const builtFunctions = new NamespacedIDMap<string>();
-		
-		const context = {
-			buildFunction(declaration: MCFunctionDeclaration) {
-				const textFile = declaration.commands.buildCommands().join('\n');
-				builtFunctions.set(declaration.namespacedID, textFile);
-	
-				if (declaration.onLoad) {
-					if (!onLoad) onLoad = new Tag();
-					onLoad.values.add(declaration.namespacedID);
-				}
-	
-				if (declaration.onTick) {
-					if (!onTick) onTick = new Tag();
-					onTick.values.add(declaration.namespacedID);
-				}
+			const content = builtFunctions.get(oldId);
+			if (content === undefined) return;
+			builtFunctions.set(newId, content);
+			builtFunctions.delete(oldId);
+		}
+
+		// rename functions
+		for (const [namespacedID, declaration] of this.mcfunctions) {
+			renameUUID(declaration.namespacedID, namespacedID);
+		}
+
+		// rename internal functions
+		if (options.internalNamespace) {
+			for (const declaration of [...this.internalFunctions, ...context.mcfunctions]) {
+				const newId = getIdFromLabel(declaration.label, options.internalNamespace);
+				renameUUID(declaration.namespacedID, newId);
 			}
 		}
 
-		for (const declaration of this.mcfunctions.values()) {
-			context.buildFunction(declaration);
+		const canInline = (namespacedId: NamespacedID) => {
+			return !this.mcfunctions.has(namespacedId);
 		}
 
 		const countOccurrences = (namespacedId: NamespacedID) => {
@@ -89,8 +123,7 @@ export class Datapack {
 
 		// inline execute function calls
 		for (const [namespacedId, text] of builtFunctions) {
-			// if inline-able
-			if (!this.mcfunctions.get(namespacedId)!.inline) continue;
+			if (!canInline(namespacedId)) continue;
 
 			// if 1 line
 			if (text.split('\n').length !== 1) continue;
@@ -107,8 +140,7 @@ export class Datapack {
 
 		// inline single use functions
 		for (const [namespacedId, _] of builtFunctions) {
-			// if inline-able
-			if (!this.mcfunctions.get(namespacedId)!.inline) continue;
+			if (!canInline(namespacedId)) continue;
 
 			// if 1 reference
 			if (countOccurrences(namespacedId) !== 1) continue;
@@ -120,15 +152,13 @@ export class Datapack {
 
 		// remove unused functions
 		for (const [namespacedId, _] of builtFunctions) {
-			// if inline-able
-			if (!this.mcfunctions.get(namespacedId)!.inline) continue;
+			if (!canInline(namespacedId)) continue;
 
 			// if 0 references
 			if (countOccurrences(namespacedId) !== 0) continue;
 			
 			builtFunctions.delete(namespacedId);
 		}
-
 
 		const files = new Map<string, string>(this.staticFiles);
 
@@ -157,52 +187,4 @@ export interface PackMeta {
 		pack_format: number;
 		description: string;
 	};
-}
-
-export class MCFunctionDeclaration {
-	inline = false;
-	onLoad = false;
-	onTick = false;
-	commands = new CommandGroup;
-	constructor(public namespacedID: NamespacedID) {}
-
-	setOnLoad(boolean: boolean) {
-		this.onLoad = boolean;
-		return this;
-	}
-
-	setOnTick(boolean: boolean) {
-		this.onTick = boolean;
-		return this;
-	}
-
-	set(provider: ()=> Iterable<Command|CommandGroup>) {
-		this.commands.commands = Array.from(provider());
-		return this;
-	}
-
-	run() {
-		return command`function ${this.namespacedID}`;
-	}
-
-	scheduleAppend(delay: Duration) {
-		return command`schedule function ${this.namespacedID} ${delay} append`;
-	}
-
-	scheduleReplace(delay: Duration) {
-		return command`schedule function ${this.namespacedID} ${delay} replace`;
-	}
-
-	scheduleClear() {
-		return command`schedule clear ${this.namespacedID}`;
-	}
-}
-
-class NamespacedIDMap<T> extends NormalizedMap<NamespacedID, T> {
-	constructor() {
-		super([], {
-			coerceKey: (id: NamespacedID) => id.toString(),
-			reviveKey: (id: string) => NamespacedID.fromString(id)
-		});
-	}
 }

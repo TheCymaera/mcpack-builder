@@ -1,7 +1,7 @@
-import { Command, command } from "./Command.ts";
+import { MCCommand, command } from "./MCCommand.ts";
 import { EntitySelector } from "./EntitySelector.ts";
 import { ExecuteCommand, ExecuteCondition, ExecuteStoreDestination } from "./ExecuteCommand.ts";
-import { IntRange } from "./IntRange.ts";
+import { IntRange } from "./dataTypes.ts";
 
 /**
  * Represents a score target.
@@ -14,10 +14,14 @@ export class ScoreSelector implements ExecuteStoreDestination {
 	}
 
 	addConstant(value: number) {
+		if (value < 0) return this.subtractConstant(-value);
+		if (!Number.isInteger(value)) console.warn(`Cannot add non-integer value ${value} to scores`);
 		return command`scoreboard players add ${this.target.buildEntitySelector()} ${this.objective} ${value}`;
 	}
 
 	subtractConstant(value: number) {
+		if (value < 0) return this.addConstant(-value);
+		if (!Number.isInteger(value)) console.warn(`Cannot subtract non-integer value ${value} from scores`);
 		return command`scoreboard players remove ${this.target.buildEntitySelector()} ${this.objective} ${value}`;
 	}
 
@@ -102,7 +106,7 @@ export class ScoreSelector implements ExecuteStoreDestination {
 		return new CompareScores(this, '>=', other);
 	}
 
-	assignCommand(command: Command) {
+	assignCommand(command: MCCommand) {
 		return new ExecuteCommand().storeResult(this).run(command);
 	}
 

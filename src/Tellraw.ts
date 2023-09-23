@@ -1,8 +1,8 @@
-import { Command } from "./Command.ts";
+import { MCCommand } from "./MCCommand.ts";
 import { EntitySelector } from "./EntitySelector.ts";
 import { TextComponent } from "./TextComponent.ts";
 
-export class Tellraw implements Command {
+export class Tellraw implements MCCommand {
 	constructor(public target: EntitySelector, public message: TextComponent) {}
 
 	buildCommand() {

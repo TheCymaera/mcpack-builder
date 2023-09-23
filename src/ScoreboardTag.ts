@@ -1,4 +1,4 @@
-import { command } from "./Command.ts";
+import { command } from "./MCCommand.ts";
 import { EntitySelector } from "./EntitySelector.ts";
 
 /**

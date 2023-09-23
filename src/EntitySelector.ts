@@ -1,12 +1,19 @@
 import { ExecuteCustomCondition } from "./ExecuteCommand.ts";
-import { NBTHolder } from "./NBTHolder.ts";
+import { NBTSelector } from "./NBTSelector.ts";
 import { ScoreboardTag } from "./ScoreboardTag.ts";
 import { stringFromTemplateParams } from "./utils.ts";
 
-export class EntitySelector implements NBTHolder {
-	public nbtHolderType = 'entity';
+export class EntitySelector {
 	private constructor(variable: string) {
 		this.#variable = variable;
+	}
+
+	get nbt() {
+		return new NBTSelector({
+			type: "entity",
+			selector: this.buildNBTHolderSelector(),
+			path: ""
+		})
 	}
 
 	buildEntitySelector() {

@@ -2,7 +2,7 @@ import { NamespacedID } from "./Namespace.ts";
 import { NormalizedCollectionOptions, NormalizedSet } from "./utils.ts";
 
 export class Tag {
-	values = new NormalizedSet<NamespacedID | TagSelector>([], normalizer);
+	values = new NormalizedSet<NamespacedID | NamespacedTag>([], normalizer);
 	replace = false;
 
 	build() {
@@ -20,26 +20,26 @@ export class Tag {
 	}
 }
 
-export class TagSelector {
+export class NamespacedTag {
 	constructor(public namespacedId: NamespacedID) {}
 
 	toString() {
 		return `#${this.namespacedId}`;
 	}
 
-	static orIDFromString(selector: string): NamespacedID | TagSelector {
+	static orIDFromString(selector: string): NamespacedID | NamespacedTag {
 		if (selector.startsWith('#')) {
-			return new TagSelector(NamespacedID.fromString(selector.slice(1)));
+			return new NamespacedTag(NamespacedID.fromString(selector.slice(1)));
 		}
 		return NamespacedID.fromString(selector);
 	}
 }
 
-const normalizer: NormalizedCollectionOptions<NamespacedID | TagSelector> = {
-	coerceKey: (value: NamespacedID | TagSelector) => {
+const normalizer: NormalizedCollectionOptions<NamespacedID | NamespacedTag> = {
+	coerceKey: (value: NamespacedID | NamespacedTag) => {
 		return value.toString();
 	},
 	reviveKey: (value: string) => {
-		return TagSelector.orIDFromString(value);
+		return NamespacedTag.orIDFromString(value);
 	}
 };

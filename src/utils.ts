@@ -1,3 +1,4 @@
+import { NamespacedID } from "./Namespace.ts";
 
 export function stringFromTemplateParams(strings: TemplateStringsArray, ...values: any[]) {
 	let string = "";
@@ -134,4 +135,18 @@ export class NormalizedMap<K, V> implements Map<K, V> {
 	}
 
 	[Symbol.toStringTag]: string;
+}
+
+export function namespacedIDMap<T>() {
+	return new NormalizedMap<NamespacedID, T>([], {
+		coerceKey: value => value.toString(),
+		reviveKey: string => NamespacedID.fromString(string)
+	});
+}
+
+export function namespacedIDSet() {
+	return new NormalizedSet<NamespacedID>([], {
+		coerceKey: value => value.toString(),
+		reviveKey: string => NamespacedID.fromString(string)
+	});
 }

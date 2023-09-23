@@ -1,4 +1,4 @@
-import { CommandGroup } from "./Command.ts";
+import { MCFunction } from "./MCCommand.ts";
 import { Scoreboard } from "./Scoreboard.ts";
 
 /**
@@ -12,7 +12,7 @@ export class ScoreAllocator {
 	public prefix: string;
 	public constantPrefix: string;
 
-	public initConstants = new CommandGroup();
+	public initConstants = new MCFunction();
 	public constants = new Set<number>();
 
 	constructor(config: {
@@ -20,6 +20,7 @@ export class ScoreAllocator {
 		prefix?: string,
 		constantPrefix?: string,
 	}) {
+		this.initConstants.label = "init_constants";
 		this.scoreboard = config.scoreboard;
 		this.prefix = config.prefix ?? "A_";
 		this.constantPrefix = config.constantPrefix ?? "C_";

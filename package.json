@@ -1,6 +1,6 @@
 {
 	"name": "mcpack-builder",
-	"version": "1.0.15-dev.7",
+	"version": "1.0.15-dev.8",
 	"description": "A utility for building Minecraft datapacks packs.",
 	"license": "MIT",
 	"type": "module",
@@ -23,6 +23,6 @@
 	"devDependencies": {
 		"@rollup/plugin-typescript": "^11.0.0",
 		"tslib": "^2.5.0",
-		"typescript": "5.1.0-dev.20230304"
+		"typescript": "^5.2.2"
 	}
 }

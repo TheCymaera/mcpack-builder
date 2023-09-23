@@ -1,25 +1,36 @@
-import { command } from "./Command.ts";
+import { command } from "./MCCommand.ts";
 import { ExecuteCommand, ExecuteCustomStoreDestination } from "./ExecuteCommand.ts";
-import { NBTHolder } from "./NBTHolder.ts";
-import { NumericDataType } from "./NumericDataType.ts";
 import { ScoreSelector } from "./ScoreSelector.ts";
+import { NumericDataType } from "./enums.ts";
 
 export class NBTSelector {
-	public target: NBTHolder;
+	public type: string;
+	public selector: string;
 	public path: string;
 
 	constructor(config: {
-		target: NBTHolder,
+		type: string;
+		selector: string;
 		path: string,
 	}) {
-		this.target = config.target;
+		this.type = config.type;
+		this.selector = config.selector;
 		this.path = config.path;
+	}
+
+	append(path: string) {
+		if (this.path) {
+			this.path += "/" + path;
+		} else {
+			this.path = path;
+		}
+		return this;
 	}
 
 	toExecuteStoreDestination(dataType: NumericDataType, scale: number) {
 		return new ExecuteCustomStoreDestination(
-			this.target.nbtHolderType + " " + 
-			this.target.buildNBTHolderSelector() + " " + 
+			this.type + " " + 
+			this.selector + " " + 
 			this.path + " " +
 			dataType + " " + 
 			scale
@@ -31,14 +42,14 @@ export class NBTSelector {
 	}
 
 	assignNBT(nbt: NBTSelector) {
-		return command`data modify ${this.target.nbtHolderType} ${this.target.buildNBTHolderSelector()} ${this.path} set from ${this.target.nbtHolderType} ${this.target.buildNBTHolderSelector()} ${nbt.path}`;
+		return command`data modify ${this.type} ${this.selector} ${this.path} set from ${this.type} ${this.selector} ${nbt.path}`;
 	}
 
 	getValue(scale: number) {
-		return command`data get ${this.target.nbtHolderType} ${this.target.buildNBTHolderSelector()} ${this.path} ${scale}`;
+		return command`data get ${this.type} ${this.selector} ${this.path} ${scale}`;
 	}
 
 	assignSNBT(value: string) {
-		return command`data modify ${this.target.nbtHolderType} ${this.target.buildNBTHolderSelector()} ${this.path} set value ${value}`;
+		return command`data modify ${this.type} ${this.selector} ${this.path} set value ${value}`;
 	}
 }

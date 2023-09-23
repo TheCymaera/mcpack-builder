@@ -1,7 +1,7 @@
-import { Color } from "./Color.ts";
+import { Color } from "./enums.ts";
 import { EntitySelector } from "./EntitySelector.ts";
-import { NBTSelector } from "./NBTSelector.ts";
 import { ScoreSelector } from "./ScoreSelector.ts";
+import { NBTSelector } from "./NBTSelector.ts";
 
 
 
@@ -93,7 +93,7 @@ export class TextComponent {
 	static nbt(nbt: NBTSelector, options: { interpret?: boolean, separator?: TextComponent } = {}) {
 		return {
 			nbt: nbt.path,
-			[nbt.target.nbtHolderType]: nbt.target.buildNBTHolderSelector(),
+			[nbt.type]: nbt.selector,
 			interpret: options.interpret,
 			separator: options.separator
 		} as TextComponent;
