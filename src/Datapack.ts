@@ -167,15 +167,15 @@ export class Datapack {
 		}
 
 		if (onLoad) {
-			files.set('data/minecraft/tags/functions/load.json', onLoad.build());
+			files.set('data/minecraft/tags/function/load.json', onLoad.build());
 		}
 
 		if (onTick) {
-			files.set('data/minecraft/tags/functions/tick.json', onTick.build());
+			files.set('data/minecraft/tags/function/tick.json', onTick.build());
 		}
 
 		for (const [namespacedId, text] of builtFunctions) {
-			files.set(`data/${namespacedId.namespace}/functions/${namespacedId.id}.mcfunction`, text);
+			files.set(`data/${namespacedId.namespace}/function/${namespacedId.id}.mcfunction`, text);
 		}
 		
 		return { files };
